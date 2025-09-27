@@ -31,7 +31,7 @@ npm run start
 ## 📱 Funcionalidades Disponíveis
 
 ### Dashboard
-- Visão geral com estatísticas dos agendamentos
+- Visão geral com estatísticas dos agendamentos da barbearia
 - Cards informativos com dados simulados
 - Navegação lateral funcional
 
