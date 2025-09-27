@@ -124,6 +124,17 @@ export const mockAppointments: MockAppointment[] = [
   }
 ]
 
+export const mockServices = [
+  'Corte de Cabelo',
+  'Barba',
+  'Corte + Barba',
+  'Corte + Barba + Bigode',
+  'Sobrancelha',
+  'Corte + Sobrancelha',
+  'Barba + Bigode',
+  'Corte Completo'
+]
+
 export const mockDashboardStats = {
   pendingAppointments: mockAppointments.filter(apt => apt.status === AppointmentStatus.PENDING).length,
   completedAppointments: mockAppointments.filter(apt => apt.status === AppointmentStatus.COMPLETED).length,

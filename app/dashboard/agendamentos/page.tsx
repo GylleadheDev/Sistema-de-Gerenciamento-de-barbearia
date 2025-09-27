@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { DashboardLayout } from '@/components/layout/dashboard-layout'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { CheckCircle, XCircle, Clock, Calendar, User, Scissors } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Calendar, User, Scissors, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDateTime, formatDate, formatTime } from '@/lib/utils'
 // Enum AppointmentStatus para demonstração
@@ -28,6 +29,7 @@ interface Appointment {
 }
 
 export default function AppointmentsPage() {
+  const router = useRouter()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<AppointmentStatus>(AppointmentStatus.PENDING)
@@ -110,9 +112,18 @@ export default function AppointmentsPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Agendamentos</h1>
-          <p className="text-gray-600">Gerencie os agendamentos da barbearia</p>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Agendamentos</h1>
+            <p className="text-gray-600">Gerencie os agendamentos da barbearia</p>
+          </div>
+          <Button 
+            onClick={() => router.push('/dashboard/agendamentos/novo')}
+            className="w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Agendamento
+          </Button>
         </div>
 
         <Tabs value={activeTab} className="w-full">
