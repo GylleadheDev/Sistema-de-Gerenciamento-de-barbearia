@@ -7,7 +7,12 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { CheckCircle, XCircle, Clock, Calendar, User, Scissors } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDateTime, formatDate, formatTime } from '@/lib/utils'
-import { AppointmentStatus } from '@prisma/client'
+// Enum AppointmentStatus para demonstração
+enum AppointmentStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
+}
 import { mockAppointments, MockAppointment } from '@/lib/mock-data'
 
 interface Appointment {

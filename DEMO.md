@@ -17,6 +17,12 @@ npm run dev
 ### 3. Acessar a Aplicação
 Abra [http://localhost:3000](http://localhost:3000) no seu navegador.
 
+### 4. Build para Produção (Opcional)
+```bash
+npm run build
+npm run start
+```
+
 ## 🔐 Credenciais de Demonstração
 
 - **Email**: admin@barbearia.com

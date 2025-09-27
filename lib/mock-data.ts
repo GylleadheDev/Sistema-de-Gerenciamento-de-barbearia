@@ -1,4 +1,9 @@
-import { AppointmentStatus } from '@prisma/client'
+// Enum AppointmentStatus para demonstração
+enum AppointmentStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED'
+}
 
 export interface MockClient {
   id: string
