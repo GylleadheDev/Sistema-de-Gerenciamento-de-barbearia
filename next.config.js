@@ -6,12 +6,16 @@ const nextConfig = {
   // Otimizações para produção
   compress: true,
   poweredByHeader: false,
-  // Evitar problemas com API routes durante o build
+  // Configurações específicas para Vercel
   typescript: {
     ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: false,
+  },
+  // Evitar problemas com pre-rendering de rotas de API
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
   }
 }
 
