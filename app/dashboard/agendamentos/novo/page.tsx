@@ -8,19 +8,29 @@ import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { ArrowLeft, Calendar, Clock, User, Scissors, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { mockClients, mockServices, MockClient } from '@/lib/mock-data'
 import { formatPhone } from '@/lib/utils'
+import { api, handleApiError, availableServices } from '@/lib/api'
 
-// Enum AppointmentStatus para demonstração
 enum AppointmentStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED'
 }
 
+interface Client {
+  id: string
+  name: string
+  phone: string
+  email?: string
+  createdAt: string
+}
+
+// Lista de serviços
+const services = availableServices
+
 export default function NewAppointmentPage() {
   const router = useRouter()
-  const [clients, setClients] = useState<MockClient[]>([])
+  const [clients, setClients] = useState<Client[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -32,11 +42,22 @@ export default function NewAppointmentPage() {
   })
 
   const fetchClients = async () => {
-    // Simulando delay de API
-    setTimeout(() => {
-      setClients(mockClients)
+    try {
+      setIsLoading(true)
+      const response = await api.getClients()
+      
+      if (response.success && response.data) {
+        setClients(response.data.clients || [])
+      } else {
+        throw new Error(response.error || 'Erro ao carregar clientes')
+      }
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error)
+      toast.error(handleApiError(error))
+      setClients([])
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
   }
 
   useEffect(() => {
@@ -51,25 +72,28 @@ export default function NewAppointmentPage() {
       return
     }
 
-    // Simulando criação de agendamento
-    setTimeout(() => {
-      const selectedClient = clients.find(client => client.id === formData.clientId)
-      if (selectedClient) {
-        const newAppointment = {
-          id: Date.now().toString(),
-          dateTime: new Date(`${formData.date}T${formData.time}`).toISOString(),
-          service: formData.service,
-          status: AppointmentStatus.PENDING,
-          client: selectedClient
-        }
-        
+    try {
+      const dateTime = new Date(`${formData.date}T${formData.time}`).toISOString()
+      
+      const response = await api.createAppointment({
+        clientId: formData.clientId,
+        service: formData.service,
+        dateTime,
+      })
+      
+      if (response.success) {
         toast.success('Agendamento criado com sucesso!')
         router.push('/dashboard/agendamentos')
+      } else {
+        throw new Error(response.error || 'Erro ao criar agendamento')
       }
-    }, 500)
+    } catch (error) {
+      console.error('Erro ao criar agendamento:', error)
+      toast.error(handleApiError(error))
+    }
   }
 
-  const handleClientSelect = (client: MockClient) => {
+  const handleClientSelect = (client: Client) => {
     setFormData({ ...formData, clientId: client.id })
     setIsModalOpen(false)
     setSearchTerm('')
@@ -181,7 +205,7 @@ export default function NewAppointmentPage() {
                   required
                 >
                   <option value="">Selecione um serviço</option>
-                  {mockServices.map((service) => (
+                  {services.map((service) => (
                     <option key={service} value={service}>
                       {service}
                     </option>

@@ -8,7 +8,7 @@ import { Modal } from '@/components/ui/modal'
 import { Plus, Edit, Trash2, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatPhone } from '@/lib/utils'
-import { mockClients, MockClient } from '@/lib/mock-data'
+import { api, handleApiError } from '@/lib/api'
 
 interface Client {
   id: string
@@ -16,6 +16,11 @@ interface Client {
   phone: string
   email?: string
   createdAt: string
+  appointments?: Array<{
+    id: string
+    status: string
+    dateTime: string
+  }>
 }
 
 export default function ClientsPage() {
@@ -31,11 +36,22 @@ export default function ClientsPage() {
   })
 
   const fetchClients = async () => {
-    // Simulando delay de API
-    setTimeout(() => {
-      setClients(mockClients)
+    try {
+      setIsLoading(true)
+      const response = await api.getClients()
+      
+      if (response.success && response.data) {
+        setClients(response.data.clients || [])
+      } else {
+        throw new Error(response.error || 'Erro ao carregar clientes')
+      }
+    } catch (error) {
+      console.error('Erro ao buscar clientes:', error)
+      toast.error(handleApiError(error))
+      setClients([])
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
   }
 
   useEffect(() => {
@@ -50,31 +66,39 @@ export default function ClientsPage() {
       return
     }
 
-    // Simulando operação de API
-    setTimeout(() => {
+    try {
+      let response
+      
       if (editingClient) {
-        // Atualizar cliente existente
-        setClients(prev => prev.map(client => 
-          client.id === editingClient.id 
-            ? { ...client, ...formData }
-            : client
-        ))
-        toast.success('Cliente atualizado com sucesso!')
+        response = await api.updateClient(editingClient.id, formData)
       } else {
-        // Adicionar novo cliente
-        const newClient: Client = {
-          id: Date.now().toString(),
-          ...formData,
-          createdAt: new Date().toISOString()
-        }
-        setClients(prev => [newClient, ...prev])
-        toast.success('Cliente cadastrado com sucesso!')
+        response = await api.createClient(formData)
       }
       
-      setIsModalOpen(false)
-      setEditingClient(null)
-      setFormData({ name: '', phone: '', email: '' })
-    }, 500)
+      if (response.success) {
+        if (editingClient) {
+          setClients(prev => prev.map(client => 
+            client.id === editingClient.id 
+              ? { ...client, ...formData }
+              : client
+          ))
+          toast.success('Cliente atualizado com sucesso!')
+        } else {
+          // Recarregar lista de clientes para obter o novo cliente
+          await fetchClients()
+          toast.success('Cliente cadastrado com sucesso!')
+        }
+        
+        setIsModalOpen(false)
+        setEditingClient(null)
+        setFormData({ name: '', phone: '', email: '' })
+      } else {
+        throw new Error(response.error || 'Erro ao salvar cliente')
+      }
+    } catch (error) {
+      console.error('Erro ao salvar cliente:', error)
+      toast.error(handleApiError(error))
+    }
   }
 
   const handleEdit = (client: Client) => {
@@ -92,11 +116,19 @@ export default function ClientsPage() {
       return
     }
 
-    // Simulando operação de API
-    setTimeout(() => {
-      setClients(prev => prev.filter(client => client.id !== clientId))
-      toast.success('Cliente excluído com sucesso!')
-    }, 500)
+    try {
+      const response = await api.deleteClient(clientId)
+      
+      if (response.success) {
+        setClients(prev => prev.filter(client => client.id !== clientId))
+        toast.success('Cliente excluído com sucesso!')
+      } else {
+        throw new Error(response.error || 'Erro ao excluir cliente')
+      }
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error)
+      toast.error(handleApiError(error))
+    }
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {

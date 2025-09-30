@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState } from 'react'
+import { signOut } from 'next-auth/react'
 import { cn } from '@/lib/utils'
 import { 
   LayoutDashboard, 
@@ -13,7 +13,7 @@ import {
   Menu,
   X
 } from 'lucide-react'
-// Removido NextAuth para demonstração
+import toast from 'react-hot-toast'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -28,6 +28,17 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
+
+  const handleLogout = async () => {
+    try {
+      await signOut({ 
+        redirect: true,
+        callbackUrl: '/login'
+      })
+    } catch (error) {
+      toast.error('Erro ao fazer logout')
+    }
+  }
 
   return (
     <>
@@ -90,7 +101,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Logout */}
           <div className="border-t border-gray-700 p-4">
             <button
-              onClick={() => window.location.href = '/login'}
+              onClick={handleLogout}
               className="group flex w-full items-center px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors"
             >
               <LogOut className="mr-3 h-5 w-5 text-gray-400 group-hover:text-white" />

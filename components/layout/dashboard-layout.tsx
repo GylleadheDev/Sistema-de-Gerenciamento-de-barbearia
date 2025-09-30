@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { Sidebar, MobileMenuButton } from './sidebar'
-import { Toaster } from 'react-hot-toast'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -39,17 +38,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </main>
       </div>
-      
-      <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-        }}
-      />
     </div>
   )
 }

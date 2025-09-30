@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-// Removido NextAuth para demonstração
+import { signIn, getSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,16 +18,27 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulando login para demonstração
-    setTimeout(() => {
-      if (email === 'admin@barbearia.com' && password === 'admin123') {
-        toast.success('Login realizado com sucesso!')
-        router.push('/dashboard')
-      } else {
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
         toast.error('Email ou senha inválidos')
+      } else {
+        // Aguardar um pouco antes de redirecionar para permitir que a sessão seja estabelecida
+        setTimeout(() => {
+          router.push('/dashboard')
+          router.refresh()
+        }, 500)
       }
+    } catch (error) {
+      toast.error('Erro ao fazer login')
+    } finally {
       setIsLoading(false)
-    }, 1000)
+    }
   }
 
   return (

@@ -8,13 +8,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { CheckCircle, XCircle, Clock, Calendar, User, Scissors, Plus } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDateTime, formatDate, formatTime } from '@/lib/utils'
-// Enum AppointmentStatus para demonstração
+import { api, handleApiError, AppointmentStatus as ApiAppointmentStatus } from '@/lib/api'
+
 enum AppointmentStatus {
   PENDING = 'PENDING',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED'
 }
-import { mockAppointments, MockAppointment } from '@/lib/mock-data'
 
 interface Appointment {
   id: string
@@ -25,7 +25,9 @@ interface Appointment {
     id: string
     name: string
     phone: string
+    email?: string
   }
+  notes?: string
 }
 
 export default function AppointmentsPage() {
@@ -35,11 +37,22 @@ export default function AppointmentsPage() {
   const [activeTab, setActiveTab] = useState<AppointmentStatus>(AppointmentStatus.PENDING)
 
   const fetchAppointments = async () => {
-    // Simulando delay de API
-    setTimeout(() => {
-      setAppointments(mockAppointments)
+    try {
+      setIsLoading(true)
+      const response = await api.getAppointments({ status: activeTab })
+      
+      if (response.success && response.data) {
+        setAppointments(response.data.appointments || [])
+      } else {
+        throw new Error(response.error || 'Erro ao carregar agendamentos')
+      }
+    } catch (error) {
+      console.error('Erro ao buscar agendamentos:', error)
+      toast.error(handleApiError(error))
+      setAppointments([])
+    } finally {
       setIsLoading(false)
-    }, 500)
+    }
   }
 
   useEffect(() => {
@@ -47,15 +60,24 @@ export default function AppointmentsPage() {
   }, [])
 
   const updateAppointmentStatus = async (appointmentId: string, status: AppointmentStatus) => {
-    // Simulando operação de API
-    setTimeout(() => {
-      setAppointments(prev => 
-        prev.map(apt => apt.id === appointmentId ? { ...apt, status } : apt)
-      )
+    try {
+      const response = await api.updateAppointmentStatus(appointmentId, status)
       
-      const statusText = status === AppointmentStatus.COMPLETED ? 'concluído' : 'cancelado'
-      toast.success(`Agendamento ${statusText} com sucesso!`)
-    }, 500)
+      if (response.success) {
+        // Atualizar o estado local
+        setAppointments(prev => 
+          prev.map(apt => apt.id === appointmentId ? { ...apt, status } : apt)
+        )
+        
+        const statusText = status === AppointmentStatus.COMPLETED ? 'concluído' : 'cancelado'
+        toast.success(`Agendamento ${statusText} com sucesso!`)
+      } else {
+        throw new Error(response.error || 'Erro ao atualizar agendamento')
+      }
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error)
+      toast.error(handleApiError(error))
+    }
   }
 
   const getStatusIcon = (status: AppointmentStatus) => {
