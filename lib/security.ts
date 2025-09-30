@@ -17,16 +17,27 @@ export function validateOrigin(request: NextRequest): boolean {
   const referer = request.headers.get('referer')
   
   // Permitir requisições do mesmo domínio
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  const allowedOrigins = [
-    baseUrl,
-    'http://localhost:3000', // Para desenvolvimento
-    'https://localhost:3000',
-  ]
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL
+  const allowedOrigins = []
+  
+  // Adicionar URL base se existir
+  if (baseUrl) {
+    allowedOrigins.push(baseUrl)
+  }
+  
+  // Para desenvolvimento local
+  if (process.env.NODE_ENV === 'development') {
+    allowedOrigins.push('http://localhost:3000', 'https://localhost:3000')
+  }
   
   // Adicionar domínios Vercel automaticamente
   if (process.env.VERCEL_URL) {
     allowedOrigins.push(`https://${process.env.VERCEL_URL}`)
+  }
+  
+  // Fallback apenas para desenvolvimento
+  if (allowedOrigins.length === 0 && process.env.NODE_ENV === 'development') {
+    allowedOrigins.push('http://localhost:3000')
   }
   
   if (origin && allowedOrigins.includes(origin)) {
