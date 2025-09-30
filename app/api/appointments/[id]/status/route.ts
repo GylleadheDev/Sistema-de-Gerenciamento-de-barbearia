@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { handleApiError, createSuccessResponse, AppError } from '@/lib/errors'
 
+// Marcar como rota dinâmica para evitar problemas no build
+export const dynamic = 'force-dynamic'
+
 const updateStatusSchema = z.object({
   status: z.enum(['PENDING', 'COMPLETED', 'CANCELLED']),
 })

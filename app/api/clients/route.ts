@@ -5,6 +5,9 @@ import { prisma } from '@/lib/prisma'
 import { clientSchema, paginationSchema } from '@/lib/validations'
 import { handleApiError, createSuccessResponse, AppError } from '@/lib/errors'
 
+// Marcar como rota dinâmica para evitar problemas no build
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
