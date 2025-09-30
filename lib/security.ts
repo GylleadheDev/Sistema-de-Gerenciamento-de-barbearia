@@ -17,11 +17,17 @@ export function validateOrigin(request: NextRequest): boolean {
   const referer = request.headers.get('referer')
   
   // Permitir requisições do mesmo domínio
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000'
   const allowedOrigins = [
-    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-    'http://localhost:3000',
+    baseUrl,
+    'http://localhost:3000', // Para desenvolvimento
     'https://localhost:3000',
   ]
+  
+  // Adicionar domínios Vercel automaticamente
+  if (process.env.VERCEL_URL) {
+    allowedOrigins.push(`https://${process.env.VERCEL_URL}`)
+  }
   
   if (origin && allowedOrigins.includes(origin)) {
     return true
