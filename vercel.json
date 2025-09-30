@@ -6,7 +6,10 @@
   "framework": "nextjs",
   "functions": {
     "app/api/**/*.ts": {
-      "maxDuration": 30
+      "maxDuration": 60
+    },
+    "app/api/auth/**/*.ts": {
+      "maxDuration": 60
     }
   },
   "regions": ["iad1"],
