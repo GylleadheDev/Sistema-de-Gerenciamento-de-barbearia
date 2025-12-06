@@ -104,6 +104,11 @@ export default function LoginPage() {
           </div>
         </form>
       </div>
+      <span> 
+        <h2>Demo credentials</h2>
+        <p>email:admin@barbearia.com</p>
+        <p>passwords:admin123</p>
+      </span>
     </div>
   )
 }
