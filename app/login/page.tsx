@@ -102,7 +102,7 @@ export default function LoginPage() {
               {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </div>
-            <span> 
+            <span className="text-sm text-gray-600 flex flex-col items-center"> 
         <h2>Demo credentials</h2>
         <p>email:admin@barbearia.com</p>
         <p>passwords:admin123</p>
