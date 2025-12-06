@@ -102,13 +102,14 @@ export default function LoginPage() {
               {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </div>
-        </form>
-      </div>
-      <span> 
+            <span> 
         <h2>Demo credentials</h2>
         <p>email:admin@barbearia.com</p>
         <p>passwords:admin123</p>
       </span>
+        </form>
+      </div>
+    
     </div>
   )
 }
