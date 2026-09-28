@@ -7,7 +7,7 @@ Sistema web completo para gerenciamento de agendamentos de barbearia com painel 
 - **Frontend**: Next.js 14 com TypeScript
 - **Estilização**: Tailwind CSS
 - **Backend**: Next.js API Routes
-- **Banco de Dados**: MongoDB Atlas
+- **Banco de Dados**: PostgreSQL (Supabase)
 - **ORM**: Prisma
 - **Autenticação**: NextAuth.js
 - **Notificações**: React Hot Toast
@@ -39,9 +39,9 @@ Sistema web completo para gerenciamento de agendamentos de barbearia com painel 
 ## 🛠️ Instalação
 
 ### Pré-requisitos
-- Node.js 18+ 
-- MongoDB Atlas (ou MongoDB local)
-- npm ou yarn
+- Node.js 18+ (ou Bun)
+- Um banco PostgreSQL (Supabase, Neon, local via Docker...)
+- npm, yarn ou bun
 
 ### Passos
 
@@ -57,10 +57,20 @@ npm install
 ```
 
 3. **Configure as variáveis de ambiente**
-Crie um arquivo `.env.local` na raiz do projeto:
+Copie o `.env.example` (versionado no repositório) para `.env`:
+```bash
+cp .env.example .env
+```
+
+> ⚠️ Use **`.env`** e não `.env.local`. O Prisma CLI (migrações, seed, studio) só lê `.env`,
+> enquanto o Next.js lê os dois. Se o `DATABASE_URL` ficar só no `.env.local`, o `prisma migrate`
+> falha com `Environment variable not found: DATABASE_URL`.
+
 ```env
-# Database
-DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/barbearia?retryWrites=true&w=majority"
+# Database (PostgreSQL / Supabase)
+# A porta 6543 é usada pela aplicação; a 5432 pelas migrações (directUrl).
+DATABASE_URL="postgresql://postgres:SENHA@aws-0-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require"
+DIRECT_URL="postgresql://postgres:SENHA@aws-0-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
@@ -76,8 +86,8 @@ ADMIN_PASSWORD="admin123"
 # Gerar o cliente Prisma
 npm run db:generate
 
-# Aplicar as migrações
-npm run db:push
+# Criar e aplicar a migração inicial (gera prisma/migrations/)
+npm run db:migrate
 
 # Popular o banco com dados iniciais
 npm run db:seed
@@ -131,9 +141,12 @@ npm run dev          # Executa em modo desenvolvimento
 npm run build        # Gera build de produção
 npm run start        # Executa build de produção
 npm run lint         # Executa o linter
-npm run db:push      # Aplica mudanças no banco
 npm run db:generate  # Gera cliente Prisma
+npm run db:migrate   # Cria e aplica migrações (desenvolvimento)
+npm run db:deploy    # Aplica migrações pendentes (produção/CI)
+npm run db:push      # Sincroniza o schema sem gerar migração (descartável)
 npm run db:seed      # Popula banco com dados iniciais
+npm run db:studio    # Abre a GUI do banco
 ```
 
 ## 📱 Responsividade
@@ -154,10 +167,13 @@ O sistema é totalmente responsivo e funciona em:
 
 Para fazer deploy em produção:
 
-1. Configure as variáveis de ambiente
-2. Execute `npm run build`
-3. Configure o banco de dados MongoDB Atlas
-4. Deploy em plataformas como Vercel, Netlify ou similar
+1. Configure as variáveis de ambiente (`DATABASE_URL`, `DIRECT_URL`, `NEXTAUTH_SECRET`)
+2. Configure o banco PostgreSQL (Supabase) e migre o schema: `npm run db:deploy`
+3. Execute `npm run build`
+4. Deploy em plataformas como Vercel
+
+> Na Vercel, `prisma migrate deploy` precisa da `DIRECT_URL` configurada nas variáveis da
+> plataforma — sem ela o deploy trava silenciosamente, do mesmo jeito que o `prisma migrate dev`.
 
 ## 📞 Suporte
 

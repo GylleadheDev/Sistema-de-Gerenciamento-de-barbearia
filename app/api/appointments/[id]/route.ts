@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { updateAppointmentSchema } from '@/lib/validations'
 import { handleApiError, createSuccessResponse, AppError } from '@/lib/errors'
@@ -13,7 +13,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth.api.getSession({ headers: headers() })
     
     if (!session) {
       throw new AppError('Não autorizado', 401, 'UNAUTHORIZED')
@@ -48,7 +48,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth.api.getSession({ headers: headers() })
     
     if (!session) {
       throw new AppError('Não autorizado', 401, 'UNAUTHORIZED')
@@ -92,7 +92,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth.api.getSession({ headers: headers() })
     
     if (!session) {
       throw new AppError('Não autorizado', 401, 'UNAUTHORIZED')

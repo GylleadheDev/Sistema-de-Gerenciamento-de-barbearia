@@ -1,8 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { signOut } from 'next-auth/react'
+import { usePathname, useRouter } from 'next/navigation'
+import { authClient } from '@/lib/auth-client'
 import { cn } from '@/lib/utils'
 import { 
   LayoutDashboard, 
@@ -28,12 +28,17 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
 
   const handleLogout = async () => {
     try {
-      await signOut({ 
-        redirect: true,
-        callbackUrl: '/login'
+      await authClient.signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.push('/login')
+            router.refresh()
+          },
+        },
       })
     } catch (error) {
       toast.error('Erro ao fazer logout')

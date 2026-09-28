@@ -3,8 +3,8 @@
 ## Pré-requisitos
 
 - Node.js 18+
-- MongoDB (local ou Atlas)
-- npm ou yarn
+- PostgreSQL (Supabase, Neon ou local via Docker)
+- npm, yarn ou bun
 
 ## Configuração Inicial
 
@@ -24,7 +24,8 @@ cp .env.example .env
 
 Edite o arquivo `.env` com suas configurações:
 
-- `DATABASE_URL`: URL de conexão com MongoDB
+- `DATABASE_URL`: URL de conexão com PostgreSQL (pooler, porta 6543)
+- `DIRECT_URL`: URL de conexão direta (porta 5432) usada pelas migrações
 - `NEXTAUTH_SECRET`: Chave secreta para autenticação
 - `ADMIN_EMAIL` e `ADMIN_PASSWORD`: Credenciais do administrador inicial
 
@@ -36,10 +37,10 @@ Gere o cliente Prisma:
 npm run db:generate
 ```
 
-Sincronize o schema com o banco:
+Sincronize o schema com o banco criando uma migração:
 
 ```bash
-npm run db:push
+npm run db:migrate
 ```
 
 ### 4. Seed do Banco (Opcional)
@@ -84,7 +85,7 @@ npm start
 
 ### 🔧 Backend
 
-- **Prisma ORM**: Para interação com MongoDB
+- **Prisma ORM**: Para interação com PostgreSQL
 - **Validação**: Zod para validação de dados
 - **Tratamento de Erros**: Sistema unificado de erros
 - **Paginação**: Sistema de paginação eficiente
@@ -126,7 +127,9 @@ npm start
 - `npm run start` - Executar build de produção
 - `npm run lint` - Verificar código com ESLint
 - `npm run db:generate` - Gerar cliente Prisma
-- `npm run db:push` - Sincronizar schema com banco
+- `npm run db:migrate` - Criar e aplicar migrações (desenvolvimento)
+- `npm run db:deploy` - Aplica migrações pendentes (produção/CI)
+- `npm run db:push` - Sincronizar schema sem gerar migração
 - `npm run db:seed` - Popular banco com dados iniciais
 - `npm run db:studio` - Abrir Prisma Studio
 

@@ -6,47 +6,36 @@ generator client {
 }
 
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // O pooler do Supabase em modo Transaction (porta 6543) aceita o query
+  // engine da aplicação, mas TRAVA o schema engine usado por `prisma migrate`
+  // e `prisma db push`. As migrações rodam pela URL direta (porta 5432).
+  // Sem esta linha o `prisma migrate dev` fica pendurado sem saída alguma.
+  directUrl = env("DIRECT_URL")
 }
 
-model Account {
-  id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String  @db.ObjectId
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
-  sessionToken String   @unique
-  userId       String   @db.ObjectId
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
+// ==========================================================================
+// Models do Better Auth
+//
+// Substituem os models do NextAuth (Account/Session/User/VerificationToken
+// no formato OAuth do NextAuth), que não eram usados: o authOptions anterior
+// só tinha CredentialsProvider com sessão em JWT e nem declarava `adapter`.
+//
+// Mudanças em relação ao formato anterior:
+//   - `users.password`      -> `accounts.password` (providerId "credential")
+//   - `users.emailVerified` -> DateTime? vira Boolean
+//   - `sessions.sessionToken/expires` -> `sessions.token/expiresAt`
+//   - `verificationTokens`  -> `verifications`
+// ==========================================================================
 
 model User {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  name          String?
+  id            String    @id @default(cuid())
+  name          String
   email         String    @unique
-  emailVerified DateTime?
+  emailVerified Boolean   @default(false)
   image         String?
-  password      String?
+  // Campo extra declarado em lib/auth.ts (advanced.user.additionalFields).
   role          UserRole  @default(ADMIN)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -57,18 +46,63 @@ model User {
   @@map("users")
 }
 
-model VerificationToken {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
-  identifier String
-  token      String   @unique
-  expires    DateTime
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
 
-  @@unique([identifier, token])
-  @@map("verificationtokens")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
 }
 
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  // Hash da senha para login por email/senha (providerId = "credential").
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
+
+// ==========================================================================
+// Models de negócio (inalterados pela migração de autenticação)
+// ==========================================================================
+
 model Client {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  id        String   @id @default(cuid())
   name      String
   phone     String
   email     String?
@@ -81,8 +115,8 @@ model Client {
 }
 
 model Appointment {
-  id        String            @id @default(auto()) @map("_id") @db.ObjectId
-  clientId  String            @db.ObjectId
+  id        String            @id @default(cuid())
+  clientId  String
   service   String
   dateTime  DateTime
   status    AppointmentStatus @default(PENDING)
@@ -92,6 +126,7 @@ model Appointment {
 
   client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
+  @@index([clientId])
   @@map("appointments")
 }
 

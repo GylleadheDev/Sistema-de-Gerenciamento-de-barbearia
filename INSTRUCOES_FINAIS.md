@@ -3,9 +3,10 @@
 ## ✅ O que foi Implementado
 
 ### 🔧 Configuração Completa
-- ✅ Variáveis de ambiente configuradas (`.env.local`)
+- ✅ Variáveis de ambiente configuradas (`.env`)
 - ✅ Dependências modernas instaladas
-- ✅ Schema Prisma para MongoDB configurado
+- ✅ Schema Prisma para PostgreSQL configurado
+- ✅ Migração inicial aplicada (`prisma/migrations/`)
 - ✅ Cliente Prisma gerado
 
 ### 🛡️ Segurança Avançada
@@ -30,20 +31,25 @@
 
 ## 🚀 Próximos Passos para Usar
 
-### 1. Configurar MongoDB Atlas
+### 1. Configurar PostgreSQL (Supabase)
 ```bash
-# 1. Acesse https://www.mongodb.com/atlas
-# 2. Crie um cluster gratuito
-# 3. Configure acesso ao banco
-# 4. Copie a string de conexão
+# 1. Acesse https://supabase.com e crie um projeto
+# 2. Em Project Settings -> Database, copie as duas connection strings
+# 3. Escolha região próxima (o vercel.json usa iad1, nos EUA)
 ```
 
+> Este projeto **não usa nenhum pacote da Supabase** — só a connection string, via Prisma.
+
 ### 2. Atualizar Variáveis de Ambiente
-Edite o arquivo `.env.local` com suas credenciais reais:
+Copie `.env.example` para `.env` e preencha:
 
 ```env
-# Substitua pela sua string de conexão MongoDB
-DATABASE_URL="mongodb+srv://SEU_USER:SUA_SENHA@SEU_CLUSTER.mongodb.net/barbearia?retryWrites=true&w=majority"
+# Pooler do Supabase (porta 6543) — usada pela aplicação
+DATABASE_URL="postgresql://postgres:SUA_SENHA@aws-0-REGIAO.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require"
+
+# Conexão direta (porta 5432) — usada pelas migrações. OBRIGATÓRIA no schema.prisma,
+# senão `prisma migrate` trava sem nenhuma mensagem.
+DIRECT_URL="postgresql://postgres:SUA_SENHA@aws-0-REGIAO.pooler.supabase.com:5432/postgres?sslmode=require"
 
 # Gere um secret forte (use: openssl rand -base64 32)
 NEXTAUTH_SECRET="seu-secret-super-seguro-aqui"
@@ -53,10 +59,13 @@ ADMIN_EMAIL="seu-email@admin.com"
 ADMIN_PASSWORD="sua-senha-segura"
 ```
 
+> ⚠️ Use **`.env`**, não `.env.local`: o Prisma CLI só lê `.env`.
+> ⚠️ O nome do banco no Supabase é sempre `postgres`.
+
 ### 3. Configurar Banco de Dados
 ```bash
-# Aplicar schema no MongoDB
-npm run db:push
+# Criar e aplicar a migração inicial
+npm run db:migrate
 
 # Popular com dados iniciais
 npm run db:seed
@@ -124,7 +133,9 @@ npm run start
 
 # Banco de dados
 npm run db:generate  # Gerar cliente Prisma
-npm run db:push      # Aplicar schema
+npm run db:migrate   # Criar e aplicar migrações
+npm run db:deploy    # Aplicar migrações (produção)
+npm run db:push      # Sincronizar schema sem migração
 npm run db:seed      # Popular dados iniciais
 npm run db:studio    # Interface visual do banco
 
@@ -150,7 +161,7 @@ curl -X POST http://localhost:3000/api/clients \
 curl -X POST http://localhost:3000/api/appointments \
   -H "Content-Type: application/json" \
   -d '{
-    "clientId": "507f1f77bcf86cd799439011",
+    "clientId": "seed-client-01",
     "service": "Corte de Cabelo",
     "dateTime": "2024-01-25T09:00:00Z"
   }'
@@ -164,8 +175,8 @@ curl http://localhost:3000/api/dashboard/stats?period=month
 ## 🚀 Deploy em Produção
 
 ### 1. Configurar Ambiente
-- Use MongoDB Atlas com cluster de produção
-- Configure variáveis de ambiente seguras
+- Use o projeto Supabase em produção (região próxima ao deploy)
+- Configure variáveis de ambiente seguras (`DATABASE_URL`, `DIRECT_URL`, `NEXTAUTH_SECRET`)
 - Use um secret forte para NextAuth
 
 ### 2. Build e Deploy
@@ -176,7 +187,7 @@ npm run start
 
 ### 3. Configurar Banco
 ```bash
-npm run db:push
+npm run db:deploy   # aplica migrações pendentes
 npm run db:seed
 ```
 
@@ -187,7 +198,7 @@ Você agora tem um **backend moderno, seguro e escalável** com:
 - ✅ **Autenticação completa** com NextAuth.js
 - ✅ **APIs REST robustas** com validação
 - ✅ **Segurança avançada** com rate limiting
-- ✅ **Banco de dados otimizado** com MongoDB
+- ✅ **Banco de dados otimizado** com PostgreSQL
 - ✅ **Tratamento de erros** profissional
 - ✅ **Documentação completa** da API
 

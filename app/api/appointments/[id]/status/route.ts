@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import { handleApiError, createSuccessResponse, AppError } from '@/lib/errors'
@@ -17,7 +17,7 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth.api.getSession({ headers: headers() })
     
     if (!session) {
       throw new AppError('Não autorizado', 401, 'UNAUTHORIZED')

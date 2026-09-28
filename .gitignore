@@ -40,4 +40,6 @@ yarn-error.log*
 next-env.d.ts
 
 # prisma
-/prisma/migrations
+# NAO ignorar /prisma/migrations: no MongoDB so existia `db push`, mas no
+# PostgreSQL os arquivos SQL de migracao sao o que reproduzem o banco.
+# Sem eles versionados, o schema do banco vira irreprodutivel.
