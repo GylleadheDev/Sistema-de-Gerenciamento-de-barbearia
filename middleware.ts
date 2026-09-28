@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
+import { getSessionCookie } from 'better-auth/cookies'
 import { apiRateLimit, authRateLimit } from '@/lib/rate-limit'
 
 export async function middleware(request: NextRequest) {
@@ -47,14 +47,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // Obter token do NextAuth
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.NEXTAUTH_SECRET 
-  })
-  
-  // Se não há token e está tentando acessar rota protegida
-  if (!token) {
+  // Presença do cookie de sessão do Better Auth.
+  //
+  // getSessionCookie apenas lê o cookie — não valida assinatura nem consulta o
+  // banco. Isso é obrigatório aqui: o middleware roda no Edge Runtime e não
+  // consegue carregar o Prisma. A validação real da sessão acontece dentro das
+  // rotas, via auth.api.getSession({ headers }).
+  const sessionCookie = getSessionCookie(request)
+
+  // Se não há sessão e está tentando acessar rota protegida
+  if (!sessionCookie) {
     if (isLoginPage) {
       return NextResponse.next()
     }
@@ -69,8 +71,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
   
-  // Se há token mas está na página de login, redirecionar para dashboard
-  if (token && isLoginPage) {
+  // Se há sessão mas está na página de login, redirecionar para dashboard
+  if (sessionCookie && isLoginPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
   

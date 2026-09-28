@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
 import { prisma } from '@/lib/prisma'
 import { clientSchema, paginationSchema } from '@/lib/validations'
 import { handleApiError, createSuccessResponse, AppError } from '@/lib/errors'
@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth.api.getSession({ headers: headers() })
     
     if (!session) {
       throw new AppError('Não autorizado', 401, 'UNAUTHORIZED')
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth.api.getSession({ headers: headers() })
     
     if (!session) {
       throw new AppError('Não autorizado', 401, 'UNAUTHORIZED')

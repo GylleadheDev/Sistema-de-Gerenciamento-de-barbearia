@@ -1,79 +1,52 @@
-import { NextAuthOptions } from 'next-auth'
-import CredentialsProvider from 'next-auth/providers/credentials'
-import { prisma } from './prisma'
-import bcrypt from 'bcryptjs'
+import { betterAuth } from 'better-auth'
+import { prismaAdapter } from 'better-auth/adapters/prisma'
+import { prisma } from '@/lib/prisma'
 
-export const authOptions: NextAuthOptions = {
-  // Remover adapter para evitar conflitos com CredentialsProvider
-  providers: [
-    CredentialsProvider({
-      name: 'credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
-      },
-      async authorize(credentials) {
-        try {
-          if (!credentials?.email || !credentials?.password) {
-            return null
-          }
+/**
+ * Better Auth substitui o NextAuth que estava aqui.
+ *
+ * Principais diferenças práticas para este projeto:
+ * - a senha deixa de morar em `users.password` e passa para `accounts.password`
+ *   (providerId "credential"), com hash próprio do Better Auth (scrypt);
+ * - `users.emailVerified` deixa de ser `DateTime?` e vira `Boolean`;
+ * - a sessão agora é persistida em `sessions` (o NextAuth usava só JWT).
+ *
+ * `role` é um campo extra declarado abaixo: ele já existia no schema e é
+ * exposto na sessão, mas nada o consumia — é a base para a autorização por
+ * role que as APIs ainda não implementam.
+ */
+export const auth = betterAuth({
+  // BETTER_AUTH_* é o nome canônico do Better Auth; os NEXTAUTH_* ficam como
+  // fallback para não exigir troca imediata em toda instância de deploy.
+  baseURL: process.env.BETTER_AUTH_URL || process.env.NEXTAUTH_URL,
+  secret: process.env.BETTER_AUTH_SECRET || process.env.NEXTAUTH_SECRET,
 
-          const user = await prisma.user.findUnique({
-            where: {
-              email: credentials.email
-            }
-          })
+  database: prismaAdapter(prisma, {
+    // O nome do provider do Prisma ("postgresql"), não o nome do adaptador.
+    provider: 'postgresql',
+  }),
 
-          if (!user || !user.password) {
-            return null
-          }
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: false,
+  },
 
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password,
-            user.password
-          )
-
-          if (!isPasswordValid) {
-            return null
-          }
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-          }
-        } catch (error) {
-          console.error('Auth error:', error)
-          return null
-        }
-      }
-    })
-  ],
   session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 dias
+    expiresIn: 60 * 60 * 24 * 30, // 30 dias (mantém o maxAge anterior do NextAuth)
+    updateAge: 60 * 60 * 24,       // renova a cada 24h
   },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role
-        token.id = user.id
-      }
-      return token
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string
-        session.user.role = token.role as string
-      }
-      return session
+
+  // `user` é chave de topo do Better Auth — NÃO fica dentro de `advanced`.
+  user: {
+    additionalFields: {
+      role: {
+        type: 'string',
+        defaultValue: 'ADMIN',
+        required: false,
+        returned: true, // expõe session.user.role
+      },
     },
   },
-  pages: {
-    signIn: '/login',
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  // Configurações para produção
-  debug: process.env.NODE_ENV === 'development',
-}
+})
+
+export type Session = typeof auth.$Infer.Session

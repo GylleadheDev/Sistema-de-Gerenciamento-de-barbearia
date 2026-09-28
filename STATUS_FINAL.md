@@ -24,17 +24,18 @@
 1. **Configure o banco de dados:**
    ```bash
    # Copie o arquivo de exemplo
-   cp .env.local.example .env.local
+   cp .env.example .env
    
-   # Edite .env.local com suas configurações:
-   # - DATABASE_URL (MongoDB)
+   # Edite .env com suas configurações:
+   # - DATABASE_URL (PostgreSQL/Supabase, pooler porta 6543)
+   # - DIRECT_URL (conexão direta porta 5432, usada pelas migrações)
    # - NEXTAUTH_SECRET (string aleatória segura)
    ```
 
 2. **Instale e configure:**
    ```bash
    npm install
-   npm run db:push
+   npm run db:migrate
    npm run db:seed
    npm run dev
    ```
@@ -95,7 +96,7 @@
 - **Next.js 14** - Framework React
 - **TypeScript** - Tipagem estática
 - **Tailwind CSS** - Estilização
-- **Prisma** - ORM para MongoDB
+- **Prisma** - ORM para PostgreSQL
 - **NextAuth.js** - Autenticação
 - **Zod** - Validação de schemas
 - **React Hot Toast** - Notificações
@@ -110,7 +111,9 @@ npm run start        # Executar build
 
 # Banco de dados
 npm run db:generate  # Gerar cliente Prisma
-npm run db:push      # Sincronizar schema
+npm run db:migrate   # Criar e aplicar migrações
+npm run db:deploy    # Aplicar migrações (produção)
+npm run db:push      # Sincronizar schema sem migração
 npm run db:seed      # Popular com dados iniciais
 npm run db:studio    # Abrir Prisma Studio
 

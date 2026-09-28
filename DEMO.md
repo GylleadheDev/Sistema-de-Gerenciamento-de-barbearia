@@ -75,8 +75,8 @@ Todas as operações CRUD estão funcionando com simulação:
 ## 🚀 Próximos Passos
 
 Para usar em produção:
-1. Configure o MongoDB Atlas
-2. Execute `npm run db:generate && npm run db:push && npm run db:seed`
+1. Configure o banco PostgreSQL (Supabase)
+2. Execute `npm run db:generate && npm run db:migrate && npm run db:seed`
 3. Reative o middleware de autenticação
 4. Configure as variáveis de ambiente
 

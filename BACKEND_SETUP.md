@@ -9,7 +9,7 @@ Este backend foi construído com as mais modernas tecnologias e práticas de seg
 ### Core
 - **Next.js 14** - Framework React com App Router
 - **TypeScript** - Tipagem estática para maior segurança
-- **MongoDB** - Banco de dados NoSQL escalável
+- **PostgreSQL** - Banco de dados relacional (Supabase)
 - **Prisma** - ORM moderno com type-safety
 
 ### Autenticação & Segurança
@@ -35,11 +35,16 @@ npm install
 
 ### 2. Configurar Variáveis de Ambiente
 
-Crie o arquivo `.env.local` na raiz do projeto:
+Crie o arquivo `.env` na raiz do projeto (`cp .env.example .env`):
+
+> O Prisma CLI lê **apenas** `.env` — não use `.env.local` para o `DATABASE_URL`.
 
 ```env
-# Database
-DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/barbearia?retryWrites=true&w=majority"
+# Database (PostgreSQL / Supabase)
+# Pooler porta 6543: usada pela aplicação
+DATABASE_URL="postgresql://postgres:SENHA@aws-0-REGIAO.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require"
+# Conexão direta porta 5432: usada pelas migrações (obrigatória no schema.prisma)
+DIRECT_URL="postgresql://postgres:SENHA@aws-0-REGIAO.pooler.supabase.com:5432/postgres?sslmode=require"
 
 # NextAuth
 NEXTAUTH_URL="http://localhost:3000"
@@ -49,13 +54,13 @@ NEXTAUTH_SECRET="your-secret-key-here-change-in-production"
 ADMIN_EMAIL="admin@barbearia.com"
 ADMIN_PASSWORD="admin123"
 
-# MongoDB
-MONGODB_URI="mongodb+srv://username:password@cluster.mongodb.net/barbearia?retryWrites=true&w=majority"
-
 # App Configuration
 NODE_ENV="development"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
+
+> Este projeto **não usa nenhum pacote da Supabase** (`@supabase/ssr`, `supabase-js`).
+> A integração é apenas a connection string, consumida pelo Prisma.
 
 ### 3. Configurar Banco de Dados
 
@@ -63,8 +68,8 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 # Gerar cliente Prisma
 npm run db:generate
 
-# Aplicar schema no banco
-npm run db:push
+# Criar e aplicar a migração inicial
+npm run db:migrate
 
 # Popular banco com dados iniciais
 npm run db:seed
@@ -126,46 +131,56 @@ npm run dev
 
 ## 📊 Estrutura do Banco de Dados
 
-### Collections MongoDB
+### Tabelas PostgreSQL
 
-#### Users
+A chave primária é `TEXT` com valor `cuid()` gerado pelo Prisma (o mesmo `id: string`
+que o MongoDB devolvia — nenhum código TypeScript precisou mudar).
+
+#### `users`
 ```typescript
 {
-  id: ObjectId
-  name: string
-  email: string (unique)
-  password: string (hashed)
-  role: 'ADMIN' | 'BARBER'
-  createdAt: DateTime
-  updatedAt: DateTime
+  id: string           // TEXT PK, cuid()
+  name?: string
+  email: string        // UNIQUE
+  emailVerified?: Date
+  image?: string
+  password?: string    // hash bcrypt
+  role: 'ADMIN' | 'BARBER'   // enum nativo "UserRole"
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
-#### Clients
+#### `clients`
 ```typescript
 {
-  id: ObjectId
+  id: string           // TEXT PK, cuid()
   name: string
   phone: string
   email?: string
-  createdAt: DateTime
-  updatedAt: DateTime
+  createdAt: Date
+  updatedAt: Date
 }
 ```
 
-#### Appointments
+#### `appointments`
 ```typescript
 {
-  id: ObjectId
-  clientId: ObjectId (ref: Client)
+  id: string                    // TEXT PK, cuid()
+  clientId: string              // FK -> clients.id, ON DELETE CASCADE, INDEX
   service: string
-  dateTime: DateTime
-  status: 'PENDING' | 'COMPLETED' | 'CANCELLED'
+  dateTime: Date                // TIMESTAMP(3)
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED'   // enum "AppointmentStatus"
   notes?: string
-  createdAt: DateTime
-  updatedAt: DateTime
+  createdAt: Date
+  updatedAt: Date
 }
 ```
+
+#### `accounts` / `sessions` / `verificationtokens`
+Tabelas do adaptador do NextAuth. Estão criadas mas **sem uso** — o `authOptions` atual
+só usa `CredentialsProvider` com sessão em JWT e não declara `adapter`.
+São justamente os models que a migração para **Better Auth** vai substituir.
 
 ## 🎯 Funcionalidades Avançadas
 
@@ -188,9 +203,10 @@ npm run dev
 ## 🚀 Deploy em Produção
 
 ### 1. Configurar Variáveis de Ambiente
-- Use um MongoDB Atlas cluster
+- Use o projeto Supabase em produção (região próxima ao deploy)
 - Configure um secret forte para NextAuth
 - Defina URLs de produção
+- Mantenha `DATABASE_URL` e `DIRECT_URL` configuradas na plataforma
 
 ### 2. Build e Deploy
 ```bash
@@ -200,7 +216,7 @@ npm run start
 
 ### 3. Configurar Banco de Dados
 ```bash
-npm run db:push
+npm run db:deploy   # aplica migrações pendentes
 npm run db:seed
 ```
 
@@ -212,7 +228,9 @@ npm run build        # Build de produção
 npm run start        # Executar produção
 npm run lint         # Linter
 npm run db:generate  # Gerar cliente Prisma
-npm run db:push      # Aplicar schema
+npm run db:migrate   # Criar e aplicar migrações
+npm run db:deploy    # Aplicar migrações (produção)
+npm run db:push      # Sincronizar schema sem migração
 npm run db:seed      # Popular banco
 npm run db:studio    # Interface visual do banco
 ```
@@ -238,7 +256,7 @@ npm run db:studio    # Interface visual do banco
 Para dúvidas ou problemas:
 1. Verifique os logs do servidor
 2. Confirme as variáveis de ambiente
-3. Teste a conexão com o MongoDB
+3. Teste a conexão com o PostgreSQL
 4. Verifique os rate limits
 
 ---

@@ -1,11 +1,15 @@
 'use client'
 
-import { SessionProvider } from 'next-auth/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
+
+// Instanciado fora do componente de propósito: recriar o QueryClient a cada
+// render do React faria o client do Better Auth perder o cache da sessão.
+const queryClient = new QueryClient()
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <SessionProvider>
+    <QueryClientProvider client={queryClient}>
       {children}
       <Toaster 
         position="top-right"
@@ -33,6 +37,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         }}
       />
-    </SessionProvider>
+    </QueryClientProvider>
   )
 }
