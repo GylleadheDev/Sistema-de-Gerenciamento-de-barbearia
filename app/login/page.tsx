@@ -1,60 +1,21 @@
-'use client'
+"use client"
 
-import { useState } from 'react'
-import { authClient } from '@/lib/auth-client'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Scissors } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { api, handleApiError } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Scissors, Lock, Mail, Sparkles, ShieldCheck, ArrowRight } from "lucide-react"
+import toast from "react-hot-toast"
 
-// Credenciais do seed (prisma/seed.ts). Ficam aqui para o bloco de demo da
-// página poder preencher o formulário com um clique — digitação manual era a
-// variável que mais atrapalhava a distinguir "senha errada" de "bug".
-const DEMO_EMAIL = 'admin@barbearia.com'
-const DEMO_PASSWORD = 'admin123'
-
-/**
- * Traduz o erro do Better Auth para algo que ajude a resolver o problema.
- *
- * Antes tudo virava "Email ou senha inválidos", o que escondia erros que não
- * têm nada a ver com credenciais (400 de validação de body, 403 de origem/CSRF,
- * falha de rede...). Os códigos vêm de @better-auth/core/error BASE_ERROR_CODES.
- */
-function describeLoginError(error: {
-  code?: string | null
-  message?: string | null
-  status?: number | null
-}) {
-  const code = error.code ?? ''
-
-  switch (code) {
-    case 'INVALID_EMAIL_OR_PASSWORD':
-      return 'Email ou senha inválidos'
-    case 'INVALID_EMAIL':
-      return 'Email em formato inválido'
-    case 'EMAIL_NOT_VERIFIED':
-      return 'Email ainda não verificado'
-    case 'EMAIL_PASSWORD_DISABLED':
-      return 'Login por email/senha desativado no servidor'
-    case 'MISSING_OR_NULL_ORIGIN':
-    case 'INVALID_ORIGIN':
-      return 'Origem não permitida — acesse por http://localhost:3000'
-    case 'CROSS_SITE_NAVIGATION_LOGIN_BLOCKED':
-      return 'Requisição bloqueada (proteção CSRF)'
-  }
-
-  if (/invalid json/i.test(error.message ?? '')) {
-    return 'Requisição malformada — recarregue a página com Ctrl+Shift+R'
-  }
-  if (error.status && error.status >= 500) return 'Erro no servidor. Tente novamente.'
-  if (!error.status) return 'Não foi possível falar com o servidor'
-  return `${error.message ?? 'Falha no login'}${code ? ` (${code})` : ''}`
-}
+const DEMO_EMAIL = "admin@barbearia.com"
+const DEMO_PASSWORD = "admin123"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
@@ -63,113 +24,123 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { error } = await authClient.signIn.email({
-        email: email.trim(),
-        password,
-      })
-
-      if (error) {
-        // Mantém o detalhe completo no console para depuração.
-        console.error('[login] Better Auth devolveu:', error)
-        toast.error(describeLoginError(error), { duration: 8000 })
+      const res = await api.login(email.trim(), password)
+      if (res.success) {
+        toast.success("Bem-vindo ao BarberPro!")
+        router.push("/dashboard")
+        router.refresh()
       } else {
-        // Aguardar um pouco antes de redirecionar para permitir que a sessão seja estabelecida
-        setTimeout(() => {
-          router.push('/dashboard')
-          router.refresh()
-        }, 500)
+        toast.error(res.error || "Credenciais inválidas")
       }
     } catch (error) {
-      toast.error('Erro ao fazer login')
+      toast.error(handleApiError(error))
     } finally {
       setIsLoading(false)
     }
   }
 
+  const fillDemo = () => {
+    setEmail(DEMO_EMAIL)
+    setPassword(DEMO_PASSWORD)
+    toast.success("Credenciais de demonstração preenchidas")
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-8 px-4 sm:py-12 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-6 sm:space-y-8">
-        <div>
-          <div className="flex justify-center">
-            <Scissors className="h-10 w-10 sm:h-12 sm:w-12 text-primary-600" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 px-4 py-12 text-zinc-100">
+      {/* Ambient background glow */}
+      <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-amber-500/15 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-0 right-10 h-72 w-72 rounded-full bg-amber-600/10 blur-3xl" />
+
+      <div className="relative z-10 w-full max-w-md space-y-6">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-amber-500/40 bg-amber-500/15 text-amber-400 shadow-lg shadow-amber-500/10">
+            <Scissors className="h-7 w-7" />
           </div>
-          <h2 className="mt-4 sm:mt-6 text-center text-2xl sm:text-3xl font-extrabold text-gray-900">
-            Sistema de Barbearia
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Faça login para acessar o painel administrativo
+          <Badge variant="default" className="mb-3">
+            <Sparkles className="h-3 w-3" />
+            Go 1.24+ API & Tailwind CSS v4
+          </Badge>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+            BARBER<span className="text-amber-500">PRO</span>
+          </h1>
+          <p className="mt-1.5 text-sm text-zinc-400">
+            Gestão inteligente de agendamentos e clientes
           </p>
         </div>
-        
-        <form className="mt-6 sm:mt-8 space-y-4 sm:space-y-6" onSubmit={handleSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1"
-                placeholder="admin@barbearia.com"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Senha
-              </label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1"
-                placeholder="••••••••"
-              />
-            </div>
-          </div>
 
-          <div>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full h-12 text-base"
-            >
-              {isLoading ? 'Entrando...' : 'Entrar'}
-            </Button>
-          </div>
-          <div className="text-sm text-gray-600 flex flex-col items-center gap-1.5 pt-4 border-t border-gray-200">
-            <span className="font-medium text-gray-700">Demo credentials</span>
-            <div className="flex flex-wrap justify-center gap-x-4 gap-y-1">
-              <button
-                type="button"
-                onClick={() => setEmail(DEMO_EMAIL)}
-                className="text-primary-700 underline decoration-dotted underline-offset-2 hover:text-primary-900"
-              >
-                {DEMO_EMAIL}
-              </button>
-              <button
-                type="button"
-                onClick={() => setPassword(DEMO_PASSWORD)}
-                className="text-primary-700 underline decoration-dotted underline-offset-2 hover:text-primary-900"
-              >
-                {DEMO_PASSWORD}
-              </button>
+        <Card className="border-zinc-800/90 bg-zinc-900/75 shadow-2xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl">Acesso Administrativo</CardTitle>
+            <CardDescription>
+              Entre com suas credenciais para gerenciar a barbearia
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="email" className="text-xs font-medium text-zinc-300">
+                  E-mail
+                </label>
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                  <Input
+                    id="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="admin@barbearia.com"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="password" className="text-xs font-medium text-zinc-300">
+                  Senha
+                </label>
+                <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+                  <Input
+                    id="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" disabled={isLoading} className="mt-2 w-full h-11">
+                {isLoading ? "Autenticando no servidor Go..." : "Entrar no Painel"}
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </form>
+
+            <div className="mt-6 rounded-xl border border-zinc-800 bg-zinc-950/80 p-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-medium text-zinc-300">
+                  <ShieldCheck className="h-4 w-4 text-amber-400" />
+                  Acesso Rápido Demo
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={fillDemo}>
+                  Preencher
+                </Button>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-zinc-400">
+                <div className="truncate rounded-md bg-zinc-900 px-2.5 py-1.5 font-mono">
+                  {DEMO_EMAIL}
+                </div>
+                <div className="truncate rounded-md bg-zinc-900 px-2.5 py-1.5 font-mono">
+                  Senha: {DEMO_PASSWORD}
+                </div>
+              </div>
             </div>
-            <span className="text-xs text-gray-400">clique para preencher</span>
-          </div>
-        </form>
+          </CardContent>
+        </Card>
       </div>
-    
     </div>
   )
 }

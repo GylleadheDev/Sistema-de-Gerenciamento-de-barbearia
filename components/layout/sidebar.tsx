@@ -1,24 +1,27 @@
-'use client'
+"use client"
 
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { authClient } from '@/lib/auth-client'
-import { cn } from '@/lib/utils'
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { api } from "@/lib/api"
+import { cn } from "@/lib/utils"
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  CalendarPlus,
   LogOut,
   Scissors,
   Menu,
-  X
-} from 'lucide-react'
-import toast from 'react-hot-toast'
+  X,
+  Sparkles,
+} from "lucide-react"
+import toast from "react-hot-toast"
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Clientes', href: '/dashboard/clientes', icon: Users },
-  { name: 'Agendamentos', href: '/dashboard/agendamentos', icon: Calendar },
+  { name: "Visão Geral", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Agendamentos", href: "/dashboard/agendamentos", icon: Calendar },
+  { name: "Novo Horário", href: "/dashboard/agendamentos/novo", icon: CalendarPlus },
+  { name: "Clientes", href: "/dashboard/clientes", icon: Users },
 ]
 
 interface SidebarProps {
@@ -32,51 +35,57 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   const handleLogout = async () => {
     try {
-      await authClient.signOut({
-        fetchOptions: {
-          onSuccess: () => {
-            router.push('/login')
-            router.refresh()
-          },
-        },
-      })
-    } catch (error) {
-      toast.error('Erro ao fazer logout')
+      await api.logout()
+      toast.success("Sessão encerrada")
+      router.push("/login")
+      router.refresh()
+    } catch {
+      toast.error("Erro ao sair")
     }
   }
 
   return (
     <>
-      {/* Mobile backdrop */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+        <div
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-xs lg:hidden"
           onClick={onClose}
         />
       )}
-      
-      {/* Sidebar */}
-      <div className={cn(
-        "fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
-        isOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="flex h-16 items-center justify-between px-6">
-            <div className="flex items-center space-x-2">
-              <Scissors className="h-8 w-8 text-primary-400" />
-              <span className="text-xl font-bold text-white">Barbearia</span>
+
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl transition-transform duration-300 ease-in-out lg:static lg:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex h-20 items-center justify-between border-b border-zinc-800/80 px-6">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shadow-inner">
+              <Scissors className="h-5 w-5" />
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-white lg:hidden"
-            >
-              <X className="h-6 w-6" />
-            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold tracking-tight text-zinc-100">
+                  BARBER<span className="text-amber-500">PRO</span>
+                </span>
+              </div>
+              <p className="text-[11px] font-medium text-zinc-500">Go Backend • Studio Edition</p>
+            </div>
           </div>
-          
-          {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3 py-4">
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-white lg:hidden cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-zinc-500">
+            Menu Principal
+          </p>
+          <nav className="space-y-1.5">
             {navigation.map((item) => {
               const isActive = pathname === item.href
               return (
@@ -85,16 +94,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   href={item.href}
                   onClick={onClose}
                   className={cn(
-                    'group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                    "group flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all",
                     isActive
-                      ? 'bg-primary-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      ? "bg-amber-500 text-zinc-950 font-semibold shadow-md shadow-amber-500/15"
+                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
                   )}
                 >
                   <item.icon
                     className={cn(
-                      'mr-3 h-5 w-5 flex-shrink-0',
-                      isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                      "h-4 w-4 shrink-0 transition-colors",
+                      isActive ? "text-zinc-950" : "text-zinc-400 group-hover:text-amber-400"
                     )}
                   />
                   {item.name}
@@ -102,19 +111,28 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               )
             })}
           </nav>
-          
-          {/* Logout */}
-          <div className="border-t border-gray-700 p-4">
-            <button
-              onClick={handleLogout}
-              className="group flex w-full items-center px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors"
-            >
-              <LogOut className="mr-3 h-5 w-5 text-gray-400 group-hover:text-white" />
-              Sair
-            </button>
+
+          <div className="mt-8 rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-zinc-900 to-zinc-950 p-4">
+            <div className="flex items-center gap-2 text-amber-400">
+              <Sparkles className="h-4 w-4" />
+              <span className="text-xs font-semibold">Motor Go 1.24+ Ativo</span>
+            </div>
+            <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
+              API ultra-rápida em Go com autenticação JWT e Tailwind CSS v4.
+            </p>
           </div>
         </div>
-      </div>
+
+        <div className="border-t border-zinc-800/80 p-4">
+          <button
+            onClick={handleLogout}
+            className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium text-zinc-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+            Encerrar Sessão
+          </button>
+        </div>
+      </aside>
     </>
   )
 }
@@ -123,9 +141,9 @@ export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="text-gray-500 hover:text-gray-600 lg:hidden"
+      className="rounded-lg border border-zinc-800 bg-zinc-900 p-2 text-zinc-300 hover:bg-zinc-800 hover:text-white lg:hidden cursor-pointer"
     >
-      <Menu className="h-6 w-6" />
+      <Menu className="h-5 w-5" />
     </button>
   )
 }

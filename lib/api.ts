@@ -1,27 +1,14 @@
-// Utilitários para chamadas da API no frontend
-
 export interface ApiResponse<T = any> {
   success: boolean
   data?: T
   message?: string
   error?: string
+  code?: string
   statusCode?: number
 }
 
-export interface PaginationResponse<T> {
-  items: T[]
-  pagination: {
-    page: number
-    limit: number
-    total: number
-    totalPages: number
-    hasNextPage: boolean
-    hasPreviousPage: boolean
-  }
-}
-
 export interface AppointmentFilters {
-  status?: 'PENDING' | 'COMPLETED' | 'CANCELLED'
+  status?: "PENDING" | "COMPLETED" | "CANCELLED"
   startDate?: string
   endDate?: string
   search?: string
@@ -35,162 +22,166 @@ export interface ClientFilters {
   limit?: number
 }
 
+export interface ServiceCatalogItem {
+  name: string
+  price: number
+  duration: number
+}
+
+export const serviceCatalog: ServiceCatalogItem[] = [
+  { name: "Corte de Cabelo", price: 45, duration: 40 },
+  { name: "Barba", price: 35, duration: 30 },
+  { name: "Corte + Barba", price: 70, duration: 60 },
+  { name: "Corte + Barba + Bigode", price: 80, duration: 75 },
+  { name: "Sobrancelha", price: 20, duration: 15 },
+  { name: "Corte + Sobrancelha", price: 60, duration: 50 },
+  { name: "Barba + Bigode", price: 45, duration: 40 },
+  { name: "Corte Completo", price: 95, duration: 90 },
+]
+
+export const availableServices = serviceCatalog.map((s) => s.name)
+
 class ApiClient {
-  private baseUrl = '/api'
+  private baseUrl = "/api"
 
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<ApiResponse<T>> {
+  private getToken(): string | null {
+    if (typeof window === "undefined") return null
+    return localStorage.getItem("barbearia_token")
+  }
+
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`
-    
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        ...options,
-      })
+    const token = this.getToken()
 
-      const data = await response.json()
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(options.headers as Record<string, string>),
+    }
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
 
-      if (!response.ok) {
-        throw new Error(data.error || `HTTP error! status: ${response.status}`)
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "include",
+    })
+
+    const data = await response.json().catch(() => ({
+      success: false,
+      error: `Erro HTTP ${response.status}`,
+    }))
+
+    if (!response.ok) {
+      if (response.status === 401 && typeof window !== "undefined" && !endpoint.includes("/auth/")) {
+        localStorage.removeItem("barbearia_token")
+        window.location.href = "/login"
       }
+      throw new Error(data.error || `Erro na requisição (${response.status})`)
+    }
 
-      return data
-    } catch (error) {
-      console.error(`API Error [${endpoint}]:`, error)
-      throw error
+    return data
+  }
+
+  // Autenticação Go Backend
+  async login(email: string, password: string): Promise<ApiResponse<any>> {
+    const res = await this.request<any>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    })
+    if (res.success && res.data?.token && typeof window !== "undefined") {
+      localStorage.setItem("barbearia_token", res.data.token)
+    }
+    return res
+  }
+
+  async logout(): Promise<ApiResponse<any>> {
+    try {
+      return await this.request("/auth/logout", { method: "POST" })
+    } finally {
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("barbearia_token")
+      }
     }
   }
 
-  // Métodos para Clientes
+  async getSession(): Promise<ApiResponse<any>> {
+    return this.request("/auth/session")
+  }
+
+  // Clientes
   async getClients(filters: ClientFilters = {}): Promise<ApiResponse<any>> {
     const params = new URLSearchParams()
-    if (filters.search) params.append('search', filters.search)
-    if (filters.page) params.append('page', filters.page.toString())
-    if (filters.limit) params.append('limit', filters.limit.toString())
-
-    return this.request(`/clients?${params.toString()}`)
+    if (filters.search) params.append("search", filters.search)
+    if (filters.page) params.append("page", filters.page.toString())
+    if (filters.limit) params.append("limit", filters.limit.toString())
+    const qs = params.toString()
+    return this.request(`/clients${qs ? `?${qs}` : ""}`)
   }
 
   async createClient(clientData: any): Promise<ApiResponse<any>> {
-    return this.request('/clients', {
-      method: 'POST',
+    return this.request("/clients", {
+      method: "POST",
       body: JSON.stringify(clientData),
     })
   }
 
   async updateClient(id: string, clientData: any): Promise<ApiResponse<any>> {
     return this.request(`/clients/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(clientData),
     })
   }
 
   async deleteClient(id: string): Promise<ApiResponse<void>> {
     return this.request(`/clients/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     })
   }
 
-  async getClient(id: string): Promise<ApiResponse<any>> {
-    return this.request(`/clients/${id}`)
-  }
-
-  // Métodos para Agendamentos
+  // Agendamentos
   async getAppointments(filters: AppointmentFilters = {}): Promise<ApiResponse<any>> {
     const params = new URLSearchParams()
-    if (filters.status) params.append('status', filters.status)
-    if (filters.startDate) params.append('startDate', filters.startDate)
-    if (filters.endDate) params.append('endDate', filters.endDate)
-    if (filters.search) params.append('search', filters.search)
-    if (filters.page) params.append('page', filters.page.toString())
-    if (filters.limit) params.append('limit', filters.limit.toString())
-
-    return this.request(`/appointments?${params.toString()}`)
+    if (filters.status) params.append("status", filters.status)
+    if (filters.startDate) params.append("startDate", filters.startDate)
+    if (filters.endDate) params.append("endDate", filters.endDate)
+    if (filters.search) params.append("search", filters.search)
+    if (filters.page) params.append("page", filters.page.toString())
+    if (filters.limit) params.append("limit", filters.limit.toString())
+    const qs = params.toString()
+    return this.request(`/appointments${qs ? `?${qs}` : ""}`)
   }
 
   async createAppointment(appointmentData: any): Promise<ApiResponse<any>> {
-    return this.request('/appointments', {
-      method: 'POST',
-      body: JSON.stringify(appointmentData),
-    })
-  }
-
-  async updateAppointment(id: string, appointmentData: any): Promise<ApiResponse<any>> {
-    return this.request(`/appointments/${id}`, {
-      method: 'PUT',
+    return this.request("/appointments", {
+      method: "POST",
       body: JSON.stringify(appointmentData),
     })
   }
 
   async updateAppointmentStatus(id: string, status: string): Promise<ApiResponse<any>> {
     return this.request(`/appointments/${id}/status`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify({ status }),
     })
   }
 
   async deleteAppointment(id: string): Promise<ApiResponse<void>> {
     return this.request(`/appointments/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     })
   }
 
-  async getAppointment(id: string): Promise<ApiResponse<any>> {
-    return this.request(`/appointments/${id}`)
-  }
-
-  // Métodos para Dashboard
-  async getDashboardStats(period: string = 'month'): Promise<ApiResponse<any>> {
+  // Dashboard
+  async getDashboardStats(period: string = "month"): Promise<ApiResponse<any>> {
     return this.request(`/dashboard/stats?period=${period}`)
   }
 }
 
-// Instância singleton do cliente da API
 export const api = new ApiClient()
 
-// Hook personalizado para tratamento de erros
 export function handleApiError(error: any): string {
-  if (error instanceof Error) {
-    return error.message
-  }
-  
-  if (typeof error === 'string') {
-    return error
-  }
-  
-  return 'Erro inesperado. Tente novamente.'
+  if (error instanceof Error) return error.message
+  if (typeof error === "string") return error
+  return "Erro inesperado. Verifique se o backend em Go está em execução."
 }
-
-// Utilitário para formatar responses da API
-export function formatApiResponse<T>(response: ApiResponse<T>): T | null {
-  if (response.success && response.data) {
-    return response.data
-  }
-  return null
-}
-
-// Lista de serviços disponíveis
-export const availableServices = [
-  'Corte de Cabelo',
-  'Barba',
-  'Corte + Barba',
-  'Corte + Barba + Bigode',
-  'Sobrancelha',
-  'Corte + Sobrancelha',
-  'Barba + Bigode',
-  'Corte Completo'
-]
-
-// Status de agendamentos
-export const appointmentStatuses = {
-  PENDING: 'Pendente',
-  COMPLETED: 'Concluído',
-  CANCELLED: 'Cancelado',
-} as const
-
-export type AppointmentStatus = keyof typeof appointmentStatuses

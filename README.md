@@ -1,184 +1,78 @@
-# Sistema de Gerenciamento de Barbearia
+# BarberPro Studio v2.0 — Go Backend + Next.js + Tailwind CSS v4 + shadcn/ui
 
-Sistema web completo para gerenciamento de agendamentos de barbearia com painel administrativo.
+Sistema completo de gerenciamento de barbearia reescrito com **Backend 100% em Go** e **Frontend moderno em Next.js 14, Tailwind CSS v4 e componentes shadcn/ui**.
 
-## 🚀 Tecnologias Utilizadas
+## 🚀 Nova Arquitetura (v2.0)
 
-- **Frontend**: Next.js 14 com TypeScript
-- **Estilização**: Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Banco de Dados**: PostgreSQL (Supabase)
-- **ORM**: Prisma
-- **Autenticação**: NextAuth.js
-- **Notificações**: React Hot Toast
+- **Backend (100% Go)**:
+  - Construído com **Go 1.24+** (`net/http` padrão moderno com roteamento nativo por método e path parameters).
+  - Autenticação própria via **JWT (HMAC-SHA256)** + Cookie `HttpOnly` (`barbearia_session`) e header `Authorization: Bearer`.
+  - Hash seguro de senhas com `crypto/sha256` + salt aleatório e derivação iterativa.
+  - Persistência concorrente (`sync.RWMutex`) com seed automático de administrador, clientes e agendamentos.
+  - Suíte de testes automatizados (`go test ./...`).
+- **Frontend**:
+  - **Next.js 14** (App Router) atuando exclusivamente como camada de interface, fazendo proxy de `/api/*` diretamente para o servidor Go.
+  - **Tailwind CSS v4** (`@import "tailwindcss"` e `@theme` via `@tailwindcss/postcss`).
+  - **shadcn/ui Design System**: Tema escuro premium (*Obsidian & Amber Gold*) com componentes reutilizáveis (`Card`, `Badge`, `Button`, `Input`, `Tabs`, `Modal`).
 
-## 📋 Funcionalidades
+---
 
-### Autenticação
-- Login seguro para administradores
-- Proteção de rotas
-- Gerenciamento de sessão
+## 🛠️ Como Executar
 
-### Dashboard
-- Visão geral dos agendamentos
-- Estatísticas em tempo real
-- Navegação intuitiva
+### 1. Iniciar o Backend em Go (Porta 8080)
 
-### Gerenciamento de Clientes
-- CRUD completo de clientes
-- Validação de dados
-- Busca e filtros
-- Máscara de telefone
-
-### Gerenciamento de Agendamentos
-- Visualização por status (Pendentes, Concluídos, Cancelados)
-- Atualização de status
-- Informações detalhadas do cliente
-- Interface responsiva
-
-## 🛠️ Instalação
-
-### Pré-requisitos
-- Node.js 18+ (ou Bun)
-- Um banco PostgreSQL (Supabase, Neon, local via Docker...)
-- npm, yarn ou bun
-
-### Passos
-
-1. **Clone o repositório**
 ```bash
-git clone <url-do-repositorio>
-cd sistema-barbearia
+cd backend
+go run ./cmd/server
 ```
 
-2. **Instale as dependências**
+Para rodar os testes do backend em Go:
+```bash
+cd backend
+go test ./... -v
+```
+
+### 2. Iniciar o Frontend Next.js (Porta 3000)
+
+Em outro terminal, na raiz do projeto:
+
 ```bash
 npm install
-```
-
-3. **Configure as variáveis de ambiente**
-Copie o `.env.example` (versionado no repositório) para `.env`:
-```bash
-cp .env.example .env
-```
-
-> ⚠️ Use **`.env`** e não `.env.local`. O Prisma CLI (migrações, seed, studio) só lê `.env`,
-> enquanto o Next.js lê os dois. Se o `DATABASE_URL` ficar só no `.env.local`, o `prisma migrate`
-> falha com `Environment variable not found: DATABASE_URL`.
-
-```env
-# Database (PostgreSQL / Supabase)
-# A porta 6543 é usada pela aplicação; a 5432 pelas migrações (directUrl).
-DATABASE_URL="postgresql://postgres:SENHA@aws-0-us-east-2.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require"
-DIRECT_URL="postgresql://postgres:SENHA@aws-0-us-east-2.pooler.supabase.com:5432/postgres?sslmode=require"
-
-# NextAuth
-NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key-here"
-
-# Admin credentials
-ADMIN_EMAIL="admin@barbearia.com"
-ADMIN_PASSWORD="admin123"
-```
-
-4. **Configure o banco de dados**
-```bash
-# Gerar o cliente Prisma
-npm run db:generate
-
-# Criar e aplicar a migração inicial (gera prisma/migrations/)
-npm run db:migrate
-
-# Popular o banco com dados iniciais
-npm run db:seed
-```
-
-5. **Execute o projeto**
-```bash
 npm run dev
 ```
 
-6. **Acesse a aplicação**
-Abra [http://localhost:3000](http://localhost:3000) no seu navegador.
+Acesse **[http://localhost:3000](http://localhost:3000)**.
 
-## 🔐 Credenciais Padrão
+---
 
-- **Email**: admin@barbearia.com
-- **Senha**: admin123
+## 🔐 Credenciais de Demonstração
 
-⚠️ **Importante**: Altere essas credenciais em produção!
+- **E-mail**: `admin@barbearia.com`
+- **Senha**: `admin123`
 
-## 📁 Estrutura do Projeto
+*(Na tela de login há um botão de preenchimento rápido com 1 clique).*
 
-```
-sistema-barbearia/
-├── app/                    # App Router do Next.js
-│   ├── api/               # API Routes
-│   ├── dashboard/         # Páginas do dashboard
-│   ├── login/            # Página de login
-│   └── globals.css       # Estilos globais
-├── components/           # Componentes React
-│   ├── layout/          # Componentes de layout
-│   └── ui/              # Componentes de UI
-├── lib/                 # Utilitários e configurações
-├── prisma/              # Schema e migrações do Prisma
-├── types/               # Definições de tipos TypeScript
-└── middleware.ts        # Middleware de autenticação
-```
+---
 
-## 🎨 Design System
+## 📡 Endpoints da API em Go (`backend/cmd/server/main.go`)
 
-O sistema utiliza Tailwind CSS com um design system personalizado:
-- Cores primárias em tons de azul
-- Componentes reutilizáveis
-- Interface responsiva
-- Feedback visual com toasts
-
-## 🔧 Scripts Disponíveis
-
-```bash
-npm run dev          # Executa em modo desenvolvimento
-npm run build        # Gera build de produção
-npm run start        # Executa build de produção
-npm run lint         # Executa o linter
-npm run db:generate  # Gera cliente Prisma
-npm run db:migrate   # Cria e aplica migrações (desenvolvimento)
-npm run db:deploy    # Aplica migrações pendentes (produção/CI)
-npm run db:push      # Sincroniza o schema sem gerar migração (descartável)
-npm run db:seed      # Popula banco com dados iniciais
-npm run db:studio    # Abre a GUI do banco
-```
-
-## 📱 Responsividade
-
-O sistema é totalmente responsivo e funciona em:
-- Desktop
-- Tablet
-- Mobile
-
-## 🔒 Segurança
-
-- Autenticação com NextAuth.js
-- Validação de dados no frontend e backend
-- Proteção de rotas com middleware
-- Senhas criptografadas com bcrypt
-
-## 🚀 Deploy
-
-Para fazer deploy em produção:
-
-1. Configure as variáveis de ambiente (`DATABASE_URL`, `DIRECT_URL`, `NEXTAUTH_SECRET`)
-2. Configure o banco PostgreSQL (Supabase) e migre o schema: `npm run db:deploy`
-3. Execute `npm run build`
-4. Deploy em plataformas como Vercel
-
-> Na Vercel, `prisma migrate deploy` precisa da `DIRECT_URL` configurada nas variáveis da
-> plataforma — sem ela o deploy trava silenciosamente, do mesmo jeito que o `prisma migrate dev`.
-
-## 📞 Suporte
-
-Para dúvidas ou problemas, entre em contato através dos issues do repositório.
-
-## 📄 Licença
-
-Este projeto está sob a licença MIT.
+| Método | Rota | Descrição |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | Status e healthcheck do servidor Go |
+| `GET` | `/api/test-db` | Diagnóstico da engine de dados e seed |
+| `GET` | `/api/services` | Catálogo de serviços, preços e durações |
+| `POST` | `/api/auth/login` | Autenticação com geração de JWT e Cookie |
+| `POST` | `/api/auth/logout` | Encerramento de sessão |
+| `GET` | `/api/auth/session` | Validação da sessão atual |
+| `GET` | `/api/clients` | Listagem paginada e busca de clientes |
+| `POST` | `/api/clients` | Cadastro de cliente com validação |
+| `GET` | `/api/clients/{id}` | Detalhes e histórico do cliente |
+| `PUT` | `/api/clients/{id}` | Atualização cadastral do cliente |
+| `DELETE` | `/api/clients/{id}` | Exclusão segura (bloqueia se houver horário pendente) |
+| `GET` | `/api/appointments` | Listagem e filtros de agendamentos |
+| `POST` | `/api/appointments` | Criação de agendamento com detecção de conflito |
+| `GET` | `/api/appointments/{id}` | Detalhes do agendamento |
+| `PUT` | `/api/appointments/{id}` | Atualização completa do agendamento |
+| `PATCH` | `/api/appointments/{id}/status` | Mudança rápida de status (`PENDING`, `COMPLETED`, `CANCELLED`) |
+| `DELETE` | `/api/appointments/{id}` | Exclusão de agendamento |
+| `GET` | `/api/dashboard/stats` | Estatísticas executivas, receita e serviços em alta |

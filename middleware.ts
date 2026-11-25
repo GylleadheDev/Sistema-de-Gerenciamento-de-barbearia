@@ -1,81 +1,30 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getSessionCookie } from 'better-auth/cookies'
-import { apiRateLimit, authRateLimit } from '@/lib/rate-limit'
 
-export async function middleware(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-  
-  // Aplicar rate limiting para APIs
-  if (pathname.startsWith('/api/')) {
-    const rateLimitResult = apiRateLimit(request)
-    
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { 
-          error: 'Muitas requisições. Tente novamente mais tarde.',
-          resetTime: rateLimitResult.resetTime 
-        },
-        { status: 429 }
-      )
-    }
-  }
 
-  // Rate limiting específico para autenticação
-  if (pathname.startsWith('/api/auth/signin')) {
-    const rateLimitResult = authRateLimit(request)
-    
-    if (!rateLimitResult.success) {
-      return NextResponse.json(
-        { 
-          error: 'Muitas tentativas de login. Tente novamente mais tarde.',
-          resetTime: rateLimitResult.resetTime 
-        },
-        { status: 429 }
-      )
-    }
-  }
-
-  // Verificar autenticação para rotas protegidas
   const isLoginPage = pathname === '/login'
   const isApiRoute = pathname.startsWith('/api')
-  const isPublicRoute = pathname === '/' || pathname.startsWith('/_next') || pathname.startsWith('/favicon')
-  const isAuthRoute = pathname.startsWith('/api/auth/')
-  
-  // Permitir acesso a rotas públicas e de autenticação
-  if (isPublicRoute || isAuthRoute) {
+  const isPublicAsset =
+    pathname === '/' ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/favicon')
+
+  if (isApiRoute || isPublicAsset) {
     return NextResponse.next()
   }
-  
-  // Presença do cookie de sessão do Better Auth.
-  //
-  // getSessionCookie apenas lê o cookie — não valida assinatura nem consulta o
-  // banco. Isso é obrigatório aqui: o middleware roda no Edge Runtime e não
-  // consegue carregar o Prisma. A validação real da sessão acontece dentro das
-  // rotas, via auth.api.getSession({ headers }).
-  const sessionCookie = getSessionCookie(request)
 
-  // Se não há sessão e está tentando acessar rota protegida
-  if (!sessionCookie) {
-    if (isLoginPage) {
-      return NextResponse.next()
-    }
-    
-    if (isApiRoute) {
-      return NextResponse.json(
-        { error: 'Não autorizado', success: false },
-        { status: 401 }
-      )
-    }
-    
+  const sessionToken = request.cookies.get('barbearia_session')?.value
+
+  if (!sessionToken && !isLoginPage) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
-  
-  // Se há sessão mas está na página de login, redirecionar para dashboard
-  if (sessionCookie && isLoginPage) {
+
+  if (sessionToken && isLoginPage) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
-  
+
   return NextResponse.next()
 }
 

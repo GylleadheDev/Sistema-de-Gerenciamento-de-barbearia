@@ -6,35 +6,39 @@ interface ModalProps {
   isOpen: boolean
   onClose: () => void
   title: string
+  description?: string
   children: React.ReactNode
   className?: string
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, description, children, className }: ModalProps) {
   if (!isOpen) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50" 
+      <div
+        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
-      <div className={cn(
-        "relative bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto",
-        className
-      )}>
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+      <div
+        className={cn(
+          "relative z-10 w-full max-w-lg overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 text-zinc-100 shadow-2xl",
+          className
+        )}
+      >
+        <div className="flex items-start justify-between border-b border-zinc-800/80 px-6 py-4">
+          <div>
+            <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
+            {description && <p className="mt-0.5 text-xs text-zinc-400">{description}</p>}
+          </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100 transition-colors cursor-pointer"
           >
-            <X className="h-6 w-6" />
+            <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="p-4 sm:p-6">
-          {children}
-        </div>
+        <div className="max-h-[80vh] overflow-y-auto p-6">{children}</div>
       </div>
     </div>
   )

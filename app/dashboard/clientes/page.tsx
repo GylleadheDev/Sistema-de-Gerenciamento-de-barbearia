@@ -1,14 +1,26 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { DashboardLayout } from '@/components/layout/dashboard-layout'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Modal } from '@/components/ui/modal'
-import { Plus, Edit, Trash2, Search } from 'lucide-react'
-import toast from 'react-hot-toast'
-import { formatPhone } from '@/lib/utils'
-import { api, handleApiError } from '@/lib/api'
+import { useState, useEffect } from "react"
+import { DashboardLayout } from "@/components/layout/dashboard-layout"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Modal } from "@/components/ui/modal"
+import {
+  Plus,
+  Edit3,
+  Trash2,
+  Search,
+  Phone,
+  Mail,
+  Calendar,
+  UserPlus,
+  Users,
+} from "lucide-react"
+import toast from "react-hot-toast"
+import { formatPhone, formatDate } from "@/lib/utils"
+import { api, handleApiError } from "@/lib/api"
 
 interface Client {
   id: string
@@ -16,11 +28,8 @@ interface Client {
   phone: string
   email?: string
   createdAt: string
-  appointments?: Array<{
-    id: string
-    status: string
-    dateTime: string
-  }>
+  totalAppointments?: number
+  pendingAppointments?: number
 }
 
 export default function ClientsPage() {
@@ -28,27 +37,22 @@ export default function ClientsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingClient, setEditingClient] = useState<Client | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchTerm, setSearchTerm] = useState("")
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: ''
+    name: "",
+    phone: "",
+    email: "",
   })
 
   const fetchClients = async () => {
     try {
       setIsLoading(true)
-      const response = await api.getClients()
-      
+      const response = await api.getClients({ limit: 100 })
       if (response.success && response.data) {
         setClients(response.data.clients || [])
-      } else {
-        throw new Error(response.error || 'Erro ao carregar clientes')
       }
     } catch (error) {
-      console.error('Erro ao buscar clientes:', error)
       toast.error(handleApiError(error))
-      setClients([])
     } finally {
       setIsLoading(false)
     }
@@ -60,43 +64,37 @@ export default function ClientsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!formData.name || !formData.phone) {
-      toast.error('Nome e telefone são obrigatórios')
+
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      toast.error("Nome e telefone são obrigatórios")
       return
     }
 
     try {
-      let response
-      
+      const payload = {
+        name: formData.name.trim(),
+        phone: formData.phone.replace(/\D/g, ""),
+        email: formData.email.trim() || undefined,
+      }
+
       if (editingClient) {
-        response = await api.updateClient(editingClient.id, formData)
-      } else {
-        response = await api.createClient(formData)
-      }
-      
-      if (response.success) {
-        if (editingClient) {
-          setClients(prev => prev.map(client => 
-            client.id === editingClient.id 
-              ? { ...client, ...formData }
-              : client
-          ))
-          toast.success('Cliente atualizado com sucesso!')
-        } else {
-          // Recarregar lista de clientes para obter o novo cliente
+        const res = await api.updateClient(editingClient.id, payload)
+        if (res.success) {
+          toast.success("Dados do cliente atualizados!")
           await fetchClients()
-          toast.success('Cliente cadastrado com sucesso!')
         }
-        
-        setIsModalOpen(false)
-        setEditingClient(null)
-        setFormData({ name: '', phone: '', email: '' })
       } else {
-        throw new Error(response.error || 'Erro ao salvar cliente')
+        const res = await api.createClient(payload)
+        if (res.success) {
+          toast.success("Novo cliente cadastrado!")
+          await fetchClients()
+        }
       }
+
+      setIsModalOpen(false)
+      setEditingClient(null)
+      setFormData({ name: "", phone: "", email: "" })
     } catch (error) {
-      console.error('Erro ao salvar cliente:', error)
       toast.error(handleApiError(error))
     }
   }
@@ -106,242 +104,221 @@ export default function ClientsPage() {
     setFormData({
       name: client.name,
       phone: client.phone,
-      email: client.email || ''
+      email: client.email || "",
     })
     setIsModalOpen(true)
   }
 
   const handleDelete = async (clientId: string) => {
-    if (!confirm('Você tem certeza que deseja excluir este cliente?')) {
-      return
-    }
-
     try {
       const response = await api.deleteClient(clientId)
-      
       if (response.success) {
-        setClients(prev => prev.filter(client => client.id !== clientId))
-        toast.success('Cliente excluído com sucesso!')
-      } else {
-        throw new Error(response.error || 'Erro ao excluir cliente')
+        setClients((prev) => prev.filter((c) => c.id !== clientId))
+        toast.success("Cliente excluído com sucesso!")
       }
     } catch (error) {
-      console.error('Erro ao excluir cliente:', error)
       toast.error(handleApiError(error))
     }
   }
 
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '')
-    const formatted = formatPhone(value)
-    setFormData({ ...formData, phone: value })
-  }
-
-  const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.phone.includes(searchTerm) ||
-    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredClients = clients.filter(
+    (c) =>
+      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.phone.includes(searchTerm) ||
+      (c.email && c.email.toLowerCase().includes(searchTerm.toLowerCase()))
   )
-
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-lg">Carregando...</div>
-        </div>
-      </DashboardLayout>
-    )
-  }
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Clientes</h1>
-            <p className="text-gray-600">Gerencie seus clientes</p>
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              Carteira de Clientes
+            </h1>
+            <p className="text-sm text-zinc-400">
+              Gerencie contatos, histórico de visitas e fidelidade
+            </p>
           </div>
-          <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto">
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Cliente
+          <Button
+            onClick={() => {
+              setEditingClient(null)
+              setFormData({ name: "", phone: "", email: "" })
+              setIsModalOpen(true)
+            }}
+          >
+            <UserPlus className="h-4 w-4" />
+            Novo Cliente
           </Button>
         </div>
 
-        <div className="bg-white shadow rounded-lg">
-          <div className="p-4 sm:p-6">
-            <div className="mb-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Buscar clientes..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500" />
+            <Input
+              placeholder="Buscar por nome, telefone ou e-mail..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Badge variant="outline" className="w-fit">
+            <Users className="h-3.5 w-3.5 text-amber-400" />
+            {filteredClients.length} clientes listados
+          </Badge>
+        </div>
 
-            {/* Desktop Table */}
-            <div className="hidden sm:block overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Nome
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Telefone
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Ações
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredClients.map((client) => (
-                    <tr key={client.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {client.name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatPhone(client.phone)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {client.email || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(client)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleDelete(client.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Cards */}
-            <div className="sm:hidden space-y-4">
-              {filteredClients.map((client) => (
-                <div key={client.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-semibold text-gray-900">{client.name}</h3>
-                    <div className="flex space-x-2">
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="h-40 animate-pulse bg-zinc-900/40" />
+            ))}
+          </div>
+        ) : filteredClients.length === 0 ? (
+          <Card className="border-dashed border-zinc-800 bg-zinc-900/30">
+            <CardContent className="flex flex-col items-center justify-center py-14 text-center">
+              <Users className="h-12 w-12 text-zinc-600" />
+              <h3 className="mt-3 text-base font-semibold text-zinc-200">
+                Nenhum cliente encontrado
+              </h3>
+              <p className="mt-1 text-xs text-zinc-500">
+                Adicione seu primeiro cliente para agendar horários.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredClients.map((client) => (
+              <Card
+                key={client.id}
+                className="flex flex-col justify-between transition-all hover:border-zinc-700"
+              >
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/10 text-base font-bold text-amber-400">
+                        {client.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="truncate text-base font-semibold text-white">
+                          {client.name}
+                        </h3>
+                        <p className="text-xs text-zinc-500">
+                          Desde {formatDate(new Date(client.createdAt))}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
                       <Button
-                        variant="outline"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleEdit(client)}
+                        title="Editar cliente"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit3 className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="destructive"
-                        size="sm"
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleDelete(client.id)}
+                        title="Excluir cliente"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 text-zinc-500 hover:text-rose-400" />
                       </Button>
                     </div>
                   </div>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center">
-                      <span className="font-medium mr-2">📞</span>
+
+                  <div className="mt-4 space-y-2 border-t border-zinc-800/80 pt-3 text-xs text-zinc-300">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3.5 w-3.5 text-amber-400" />
                       <span>{formatPhone(client.phone)}</span>
                     </div>
-                    {client.email && (
-                      <div className="flex items-center">
-                        <span className="font-medium mr-2">✉️</span>
-                        <span>{client.email}</span>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-3.5 w-3.5 text-zinc-500" />
+                      <span className="truncate">{client.email || "Sem e-mail cadastrado"}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between pt-2">
+                    <Badge variant="outline">
+                      <Calendar className="h-3 w-3 text-amber-400" />
+                      {client.totalAppointments || 0} visitas
+                    </Badge>
+                    {(client.pendingAppointments || 0) > 0 && (
+                      <Badge variant="warning">
+                        {client.pendingAppointments} agendado(s)
+                      </Badge>
                     )}
                   </div>
-                </div>
-              ))}
-            </div>
-            
-            {filteredClients.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'Nenhum cliente encontrado' : 'Nenhum cliente cadastrado'}
-              </div>
-            )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </div>
+        )}
 
         <Modal
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false)
             setEditingClient(null)
-            setFormData({ name: '', phone: '', email: '' })
           }}
-          title={editingClient ? 'Editar Cliente' : 'Adicionar Cliente'}
+          title={editingClient ? "Editar Cliente" : "Novo Cliente"}
+          description="Preencha os dados de contato do cliente"
         >
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-300">
                 Nome Completo *
               </label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nome completo do cliente"
+                placeholder="Ex: Gabriel Almeida"
                 required
               />
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Telefone/WhatsApp *
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-300">
+                Telefone / WhatsApp (DDD + Número) *
               </label>
               <Input
                 value={formData.phone}
-                onChange={handlePhoneChange}
-                placeholder="(11) 99999-9999"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    phone: e.target.value.replace(/\D/g, "").slice(0, 11),
+                  })
+                }
+                placeholder="11999998888"
                 maxLength={11}
                 required
               />
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-zinc-300">
+                E-mail (opcional)
               </label>
               <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                placeholder="email@exemplo.com"
+                placeholder="cliente@email.com"
               />
             </div>
-            
-            <div className="flex justify-end space-x-2 pt-4">
+
+            <div className="flex justify-end gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  setIsModalOpen(false)
-                  setEditingClient(null)
-                  setFormData({ name: '', phone: '', email: '' })
-                }}
+                onClick={() => setIsModalOpen(false)}
               >
                 Cancelar
               </Button>
               <Button type="submit">
-                {editingClient ? 'Atualizar' : 'Cadastrar'}
+                <Plus className="h-4 w-4" />
+                {editingClient ? "Salvar Alterações" : "Cadastrar Cliente"}
               </Button>
             </div>
           </form>

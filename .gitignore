@@ -39,6 +39,12 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Go backend binaries & runtime data
+backend/*.exe
+backend/barbearia-api
+backend/data/
+
+
 # prisma
 # NAO ignorar /prisma/migrations: no MongoDB so existia `db push`, mas no
 # PostgreSQL os arquivos SQL de migracao sao o que reproduzem o banco.
