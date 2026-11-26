@@ -41,7 +41,10 @@ type Store struct {
 }
 
 func NewStore(cfg *config.Config) (*Store, error) {
-	dataDir := "data"
+	dataDir := cfg.DataDir
+	if dataDir == "" {
+		dataDir = "data"
+	}
 	_ = os.MkdirAll(dataDir, 0755)
 	fp := filepath.Join(dataDir, "database.json")
 

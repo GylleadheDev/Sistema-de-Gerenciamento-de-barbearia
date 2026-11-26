@@ -13,10 +13,11 @@ type Config struct {
 	AdminEmail     string
 	AdminPassword  string
 	AllowedOrigins string
+	StaticDir      string
+	DataDir        string
 }
 
 func Load() *Config {
-	// Attempt to load .env from current or parent directory
 	loadEnvFile(".env")
 	loadEnvFile("../.env")
 
@@ -25,7 +26,9 @@ func Load() *Config {
 	jwtSecret := getEnv("BETTER_AUTH_SECRET", getEnv("JWT_SECRET", getEnv("NEXTAUTH_SECRET", "barbearia-super-secret-jwt-key-2026")))
 	adminEmail := getEnv("ADMIN_EMAIL", "admin@barbearia.com")
 	adminPass := getEnv("ADMIN_PASSWORD", "admin123")
-	origins := getEnv("ALLOWED_ORIGINS", "http://localhost:3000")
+	origins := getEnv("ALLOWED_ORIGINS", "https://barber.numam.app")
+	staticDir := getEnv("STATIC_DIR", "")
+	dataDir := getEnv("DATA_DIR", "data")
 
 	return &Config{
 		Port:           port,
@@ -34,6 +37,8 @@ func Load() *Config {
 		AdminEmail:     adminEmail,
 		AdminPassword:  adminPass,
 		AllowedOrigins: origins,
+		StaticDir:      staticDir,
+		DataDir:        dataDir,
 	}
 }
 

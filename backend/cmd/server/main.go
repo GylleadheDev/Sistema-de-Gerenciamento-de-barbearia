@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -30,6 +33,41 @@ func corsAndLogMiddleware(cfg *config.Config, next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		log.Printf("[GO-API] %s %s (%s)", r.Method, r.URL.Path, time.Since(start).Round(time.Microsecond))
 	})
+}
+
+func staticFileHandler(staticDir string) http.HandlerFunc {
+	fs := http.FileServer(http.Dir(staticDir))
+	return func(w http.ResponseWriter, r *http.Request) {
+		cleanPath := filepath.Clean(strings.TrimPrefix(r.URL.Path, "/"))
+		if cleanPath == "." || cleanPath == "" {
+			http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+			return
+		}
+
+		// 1. Exact file match (e.g., /_next/static/..., /favicon.svg)
+		exactPath := filepath.Join(staticDir, cleanPath)
+		if info, err := os.Stat(exactPath); err == nil && !info.IsDir() {
+			fs.ServeHTTP(w, r)
+			return
+		}
+
+		// 2. Next.js static export HTML file match (e.g., /login -> /login.html)
+		htmlPath := exactPath + ".html"
+		if info, err := os.Stat(htmlPath); err == nil && !info.IsDir() {
+			http.ServeFile(w, r, htmlPath)
+			return
+		}
+
+		// 3. Directory index.html match (e.g., /dashboard/ -> /dashboard/index.html)
+		dirIndex := filepath.Join(exactPath, "index.html")
+		if info, err := os.Stat(dirIndex); err == nil && !info.IsDir() {
+			http.ServeFile(w, r, dirIndex)
+			return
+		}
+
+		// 4. Fallback to root index.html for SPA navigation
+		http.ServeFile(w, r, filepath.Join(staticDir, "index.html"))
+	}
 }
 
 func NewRouter(api *handlers.API, cfg *config.Config) http.Handler {
@@ -65,6 +103,14 @@ func NewRouter(api *handlers.API, cfg *config.Config) http.Handler {
 
 	// Dashboard Analytics routes (Protected)
 	mux.HandleFunc("GET /api/dashboard/stats", api.RequireAuth(api.HandleDashboardStats))
+
+	// Serve Next.js static export if STATIC_DIR is configured
+	if cfg.StaticDir != "" {
+		if info, err := os.Stat(cfg.StaticDir); err == nil && info.IsDir() {
+			log.Printf("📦 Servindo frontend estático de %s", cfg.StaticDir)
+			mux.HandleFunc("/", staticFileHandler(cfg.StaticDir))
+		}
+	}
 
 	return corsAndLogMiddleware(cfg, mux)
 }
